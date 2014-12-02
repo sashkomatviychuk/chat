@@ -1,0 +1,34 @@
+<html>
+    <head>
+        <title>Чат</title>
+        <link rel="stylesheet" type="text/css" href="//code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css">
+        <link rel="stylesheet" type="text/css" href="/public/css/client.css">
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.1/jquery.min.js"></script>
+        <script type="text/javascript" src="//code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+        <script type="text/javascript" src="/public/js/handlebars.js"></script>
+        <script type="text/javascript" src="/public/js/client.js"></script>
+    </head>
+    <body>
+
+        <%-partial('tmp/chat') %>
+
+        <div class="users-container">
+            <input type="button" id="update" value="Змінити ім`я">
+            <b>Користувачі онлайн:</b>
+            <div id="users"></div>
+        </div>
+
+        <div class="all-chats">
+            <div class="chat-container" id="common" style="">
+                <div class="chat-header">
+                    <div class="chat-title">Загальний чат </div>
+                    <div class="close" onclick="">&times;</div>
+                </div>
+                <div id="conversation" class="conv"></div>
+                <input class="data-send" style="" />
+            </div>
+        </div>
+        
+    </body>
+</html>

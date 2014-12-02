@@ -1,0 +1,324 @@
+<html>
+<head>
+  <title>Чат</title>
+
+<style type="text/css">
+  .time{
+    font-family: Courier;
+    font-size: 12px;
+  }
+
+  .user{
+    font-family: Verdana;
+    color: #0220C4;
+    font-size: 12px;
+    font-weight: bold;
+  }
+
+  .me {
+    color: #0270C5;
+  }
+
+  .data{
+    font-family: Verdana;
+    font-size: 12px;
+  }
+
+  .users-container {
+    float:left;
+    width:150px;
+    height:300px;
+    padding:4px;
+    overflow-y:scroll;
+    margin-right: 4px;
+    font-size: 12px;
+    font-family: Verdana;
+    color:#999;
+  }
+
+  .users-container::-webkit-scrollbar{
+    width: 7px;
+  }
+
+  .users-container::-webkit-scrollbar-thumb{
+    width: 7px;
+    height: 30px;
+    border-radius: 4px;
+    background-color: #bbb;
+  }
+  .users-container::-webkit-scrollbar-thumb:hover{
+    border-radius: 4px;
+    background-color: #aaa;
+  }
+
+  #update {
+    display: block;
+    background-color: #555;
+    color: #fff;
+    border: 1px #5f5f5f solid;
+    width: 100%;
+    height: 25px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .chat-container {
+    float: left;
+    width: 250;
+    padding: 8px;
+    padding-top: 10px;
+    background-color: #555;
+    border-radius: 4px;
+    margin: 4px;
+  }
+  #conversation {
+    padding: 2px;
+    overflow-y:scroll;
+    height: 300px;
+    background-color: #fff;
+    border-radius: 3px;
+    margin-bottom: 1px;
+    cursor: default;
+  }
+  #conversation::-webkit-scrollbar{
+    width: 7px;
+  }
+  #conversation::-webkit-scrollbar-thumb{
+    width: 7px;
+    height: 30px;
+    border-radius: 4px;
+    background-color: #bbb;
+  }
+  #conversation::-webkit-scrollbar-thumb:hover{
+    border-radius: 4px;
+    background-color: #aaa;
+  }
+
+  .data-send {
+    width:100%; 
+    border: 0px; 
+    outline:none; 
+    padding: 2px 4px;
+    border-radius: 3px;
+  }
+
+  .data-info {
+    font-family: Verdana;
+    font-size: 12px;
+    color: #ccc;
+    font-style: italic;
+  }
+  hr {
+    border: 0px;
+    border-bottom: 1px dotted #ACACAC;
+    color: #fff;
+    background-color: #fff;
+  }
+
+  .dialog {
+    color: #333;
+    text-decoration: none;
+  }
+  .chat-title {
+    color: #fff;
+    font-weight: bold;
+    font-size: 12px;
+    text-align: center;
+    font-family: Verdana;
+    padding-bottom: 4px;
+    float: left;
+  }
+
+  .close {
+    padding: 2px;
+    padding-left: 242px;
+    color: #aaa;
+    width: 4px;
+    cursor: pointer;
+  }
+
+  .close:hover {
+    color: #ddd;
+  }
+</style>
+<link rel="stylesheet" type="text/css" href="//code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css">
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.1/jquery.min.js"></script>
+<script type="text/javascript" src="//code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+<script>
+  var socket = io.connect('http://localhost:8080');
+
+  var messageOthers = '<span class="time">[{time}]</span> <span class="user">{user}</span>: <span class="data">{data}</span>';
+  var messageMe = '<span class="time">[{time}]</span> <span class="user me">{user}</span>: <span class="data">{data}</span>';
+
+  var messageInfo = '<span class="time">[{time}]</span> <span class="data-info">{data}</span>'
+
+  var msg;
+
+  var myName;
+  var myId;
+
+  var $activeContainer;
+  var $activeConv;
+
+  // on connection to server, ask for user's name with an anonymous callback
+  socket.on('connect', function(){
+    $activeContainer = $('#common');
+    $activeConv = $activeContainer.find('div.conv');
+    myName = prompt("What's your name?");
+    socket.emit('adduser', myName);
+  });
+
+  socket.on('errorAddUser', function() {
+    myName = prompt("What's your name?");
+    socket.emit('adduser', myName);
+  });
+
+  // listener, whenever the server emits 'updatechat', this updates the chat body
+  socket.on('updatechat', function (username, data, me, room) {
+
+    var time = (new Date).toLocaleTimeString();
+
+    if (room) {
+      $activeContainer = $('#' + room);
+      $activeConv = $activeContainer.find('div.conv');
+    }
+
+    if (username == 'SERVER') {
+      msg = messageInfo.replace('{time}', time).replace('{data}', data);
+    } else {
+      if (!me) {
+        msg = messageOthers.replace('{time}', time).replace('{user}', username).replace('{data}', data);
+      } else {
+
+        msg = messageMe.replace('{time}', time).replace('{user}', username).replace('{data}', data);
+      }
+    }
+
+    if (room == 'ALL') {
+      $('div.conv').each(function() {
+        $(this).append(msg + '<hr>');
+        $(this).scrollTop($(this).scrollHeight);
+      });
+    } else {
+
+      $activeConv.append(msg + '<hr>');
+      $activeConv.scrollTop($("#conversation")[0].scrollHeight);
+    }
+  });
+
+  // Користувачі онлайн
+  socket.on('updateusers', function(data, userIds) {
+    $('#users').empty();
+    myId = userIds[myName];
+    $('#users').append('<div><a class="dialog" href="#" onclick="changeChat(\'common\');">Загальний діалог</a></div>');
+    $.each(data, function(key, value) {
+      if (key != myName) {
+        $('#users').append('<div><a class="dialog" href="#" onclick="changeChat(\'id'+userIds[key] + '\',\''+ key +'\');">' + key + '</a></div>');
+      } else {
+      //  myId = userIds[key];
+        $('#users').append('<div>' + key + '</div>');
+      }
+
+    });
+    socket.emit('showDialogs');
+  });
+
+  function changeChat(name, nameVal) {
+    var $dialog = $('#' + name);
+    if (!$dialog.length) {
+      $dialog = $("#common").clone();
+      $dialog.attr('id', name);
+      $dialog.find('#conversation').empty();
+      $dialog.find('.chat-title').html(nameVal);
+      $(".chat-container:last").after($dialog);
+      if (!$dialog.find('.data-send').is(":focus")) {
+        $dialog.find('.data-send').focus();
+      }
+    }
+
+    $activeContainer = $('#' + name);
+    $activeConv = $activeContainer.find('div.conv');
+
+    socket.emit('startDialog', name.replace('id', ''), myId);
+  }
+
+  // on load of page
+   $(function(){
+      $('.chat-container').draggable();
+      //$('.users-container').draggable({cancel: ".chat-container"});
+      $( ".users-container" ).disableSelection();
+      // when the client clicks SEND
+      $('#datasend').click( function() {
+         var message = $('.data-send').val();
+         $('.data-send').val('');
+         // tell server to execute 'sendchat' and send along one parameter
+         socket.emit('sendchat', message);
+      });
+
+      // function close(this) {
+      //    $(this).parents('div.chat-container').remove();
+      // } 
+
+      $('body').on('click', 'div.close', function (e) {
+         $(this).parents('div.chat-container').remove();
+      });
+
+      $('body').on('focus', 'input.data-send', function () {
+         $activeContainer = $(this).parent('.chat-container');
+         $activeConv = $activeContainer.find('div.conv');
+         socket.emit('startDialog', $activeContainer.attr('id').replace('id', ''), myId);
+      });
+
+      // when the client hits ENTER on their keyboard
+      var $id = $($activeContainer).attr('id');
+      $('body').on('keyup', 'input.data-send', function(e) {
+         if(e.which == 13) {
+            var message = $(this).val();
+            var room = $(this).parent('.chat-container').attr('id');
+            $(this).val('');
+
+            $activeContainer = $(this).parent('.chat-container');
+            $activeConv = $activeContainer.find('div.conv');
+
+            sendTo = room;
+
+            if (room != 'common') {
+             sendTo = 'id' + myId;
+            }
+
+            // tell server to execute 'sendchat' and send along one parameter
+            socket.emit('sendchat', message, sendTo);
+         }
+      });
+
+      // Зміна імені в чоті
+      $('#update').click(function() {
+         tmpMyName = prompt("Введіть нове ім`я");
+         if (tmpMyName != null && tmpMyName.length) {
+           myName = tmpMyName;
+           socket.emit('updateName', myName);
+         }
+      });
+
+  });
+
+</script>
+</head>
+<body>
+
+  <div class="users-container">
+    <input type="button" id="update" value="Змінити ім`я">
+    <b>Користувачі онлайн:</b>
+    <div id="users"></div>
+  </div>
+  <div class="chat-container" id="common" style="">
+    <div class="chat-header">
+      <div class="chat-title">Загальний чат </div>
+      <div class="close" onclick="">&times;</div>
+    </div>
+    <div id="conversation" class="conv"></div>
+    <input class="data-send" style="" />
+  </div>
+</body>
+</html>
